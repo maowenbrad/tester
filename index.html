@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a24;
+      --surface2: #23233a;
+      --border: #2e2e45;
+      --accent: #7c6af7;
+      --accent-dim: #4a3fb5;
+      --text: #e8e8f0;
+      --text-dim: #8888aa;
+      --green: #4ade80;
+      --yellow: #fbbf24;
+      --blue: #60a5fa;
+      --red: #f87171;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
+    header .logo { font-size: 1.5rem; }
+
+    .stats {
+      margin-left: auto;
+      display: flex;
+      gap: 20px;
+    }
+
+    .stat { text-align: center; }
+    .stat-num { font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    input[type="text"], input[type="number"], textarea, select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    .search-wrap input { padding-left: 38px; }
+
+    select { cursor: pointer; }
+
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .tab:hover { border-color: var(--accent); color: var(--text); }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* Add button */
+    .btn-add {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-add:hover { background: var(--accent-dim); }
+
+    /* Book grid */
+    .book-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+
+    .empty-state {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-dim);
+    }
+
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state p { font-size: 1rem; }
+
+    /* Book card */
+    .book-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.15s, transform 0.15s;
+      position: relative;
+    }
+
+    .book-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+
+    .book-title {
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.3;
+      flex: 1;
+    }
+
+    .book-author { font-size: 0.82rem; color: var(--text-dim); }
+    .book-genre { font-size: 0.75rem; color: var(--text-dim); }
+
+    .status-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .status-to-read   { background: #1e2a3a; color: var(--blue); }
+    .status-reading   { background: #2a2110; color: var(--yellow); }
+    .status-finished  { background: #0f2a1a; color: var(--green); }
+
+    .stars { display: flex; gap: 2px; }
+
+    .star { font-size: 1rem; cursor: pointer; color: var(--border); transition: color 0.1s; }
+    .star.filled { color: var(--yellow); }
+    .star:hover { color: var(--yellow); }
+
+    .book-notes {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+      white-space: pre-wrap;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 4px;
+    }
+
+    .status-select {
+      flex: 1;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.15s;
+    }
+
+    .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-del:hover { border-color: var(--red); color: var(--red); }
+
+    /* Modal */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal h2 { font-size: 1.2rem; font-weight: 700; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 0.8rem; color: var(--text-dim); font-weight: 500; }
+
+    .field textarea { resize: vertical; min-height: 80px; }
+
+    .star-pick { display: flex; gap: 6px; }
+    .star-pick .star { font-size: 1.4rem; }
+
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: var(--radius);
+      padding: 9px 18px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
+
+    .btn-save {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 9px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-save:hover { background: var(--accent-dim); }
+
+    @media (max-width: 600px) {
+      .stats { gap: 12px; }
+      .stat-num { font-size: 1rem; }
+      header h1 { font-size: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">📚</span>
+  <h1>Book Tracker</h1>
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total</div></div>
+    <div class="stat"><div class="stat-num" id="stat-reading">0</div><div class="stat-label">Reading</div></div>
+    <div class="stat"><div class="stat-num" id="stat-finished">0</div><div class="stat-label">Finished</div></div>
+  </div>
+</header>
+
+<main>
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="search" placeholder="Search by title, author, or genre…" />
+    </div>
+    <select id="sort-select" style="width:auto;flex-shrink:0;">
+      <option value="added">Newest first</option>
+      <option value="title">Title A–Z</option>
+      <option value="author">Author A–Z</option>
+      <option value="rating">Highest rated</option>
+    </select>
+    <button class="btn-add" onclick="openModal()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Add Book
+    </button>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="tab active" data-filter="all">All</button>
+    <button class="tab" data-filter="to-read">To Read</button>
+    <button class="tab" data-filter="reading">Reading</button>
+    <button class="tab" data-filter="finished">Finished</button>
+  </div>
+
+  <div class="book-grid" id="book-grid"></div>
+</main>
+
+<!-- Add/Edit Modal -->
+<div class="overlay" id="overlay" onclick="closeOnBackdrop(event)">
+  <div class="modal">
+    <h2 id="modal-title">Add Book</h2>
+
+    <div class="field">
+      <label>Title *</label>
+      <input type="text" id="f-title" placeholder="e.g. Dune" />
+    </div>
+    <div class="field">
+      <label>Author *</label>
+      <input type="text" id="f-author" placeholder="e.g. Frank Herbert" />
+    </div>
+    <div class="field">
+      <label>Genre</label>
+      <input type="text" id="f-genre" placeholder="e.g. Sci-Fi" />
+    </div>
+    <div class="field">
+      <label>Status</label>
+      <select id="f-status">
+        <option value="to-read">To Read</option>
+        <option value="reading">Reading</option>
+        <option value="finished">Finished</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Rating</label>
+      <div class="star-pick" id="f-stars">
+        <span class="star" data-v="1">★</span>
+        <span class="star" data-v="2">★</span>
+        <span class="star" data-v="3">★</span>
+        <span class="star" data-v="4">★</span>
+        <span class="star" data-v="5">★</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="f-notes" placeholder="Your thoughts, quotes, etc."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveBook()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'book-tracker-v1';
+
+  let books = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  let editingId = null;
+  let currentFilter = 'all';
+  let pickedRating = 0;
+
+  // ---- Persistence ----
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(books));
+  }
+
+  // ---- Render ----
+  function render() {
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    const sort = document.getElementById('sort-select').value;
+
+    let list = books.filter(b => {
+      if (currentFilter !== 'all' && b.status !== currentFilter) return false;
+      if (q) {
+        return b.title.toLowerCase().includes(q)
+          || b.author.toLowerCase().includes(q)
+          || (b.genre || '').toLowerCase().includes(q);
+      }
+      return true;
+    });
+
+    list = [...list].sort((a, b) => {
+      if (sort === 'title')    return a.title.localeCompare(b.title);
+      if (sort === 'author')   return a.author.localeCompare(b.author);
+      if (sort === 'rating')   return (b.rating || 0) - (a.rating || 0);
+      return b.added - a.added; // newest first
+    });
+
+    const grid = document.getElementById('book-grid');
+    grid.innerHTML = '';
+
+    if (list.length === 0) {
+      grid.innerHTML = `<div class="empty-state">
+        <div class="icon">📖</div>
+        <p>${q || currentFilter !== 'all' ? 'No books match your filter.' : 'No books yet — add one!'}</p>
+      </div>`;
+    } else {
+      list.forEach(b => grid.appendChild(buildCard(b)));
+    }
+
+    // Stats
+    document.getElementById('stat-total').textContent = books.length;
+    document.getElementById('stat-reading').textContent = books.filter(b => b.status === 'reading').length;
+    document.getElementById('stat-finished').textContent = books.filter(b => b.status === 'finished').length;
+  }
+
+  function statusLabel(s) {
+    return { 'to-read': 'To Read', 'reading': 'Reading', 'finished': 'Finished' }[s] || s;
+  }
+
+  function buildCard(b) {
+    const card = document.createElement('div');
+    card.className = 'book-card';
+
+    const stars = Array.from({length: 5}, (_, i) =>
+      `<span class="star ${i < (b.rating || 0) ? 'filled' : ''}" data-id="${b.id}" data-v="${i+1}" onclick="rateBook('${b.id}',${i+1})">★</span>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div>
+          <div class="book-title">${esc(b.title)}</div>
+          <div class="book-author">${esc(b.author)}</div>
+          ${b.genre ? `<div class="book-genre">${esc(b.genre)}</div>` : ''}
+        </div>
+        <span class="status-badge status-${b.status}">${statusLabel(b.status)}</span>
+      </div>
+      <div class="stars">${stars}</div>
+      ${b.notes ? `<div class="book-notes">${esc(b.notes)}</div>` : ''}
+      <div class="card-actions">
+        <select class="status-select" onchange="changeStatus('${b.id}', this.value)">
+          <option value="to-read"  ${b.status==='to-read'  ? 'selected':''}>To Read</option>
+          <option value="reading"  ${b.status==='reading'  ? 'selected':''}>Reading</option>
+          <option value="finished" ${b.status==='finished' ? 'selected':''}>Finished</option>
+        </select>
+        <button class="btn-icon" onclick="editBook('${b.id}')" title="Edit">✏️</button>
+        <button class="btn-icon btn-del" onclick="deleteBook('${b.id}')" title="Delete">🗑</button>
+      </div>
+    `;
+    return card;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ---- Actions ----
+  function rateBook(id, v) {
+    const b = books.find(x => x.id === id);
+    if (!b) return;
+    b.rating = b.rating === v ? 0 : v; // toggle off if same
+    save(); render();
+  }
+
+  function changeStatus(id, status) {
+    const b = books.find(x => x.id === id);
+    if (!b) return;
+    b.status = status;
+    save(); render();
+  }
+
+  function deleteBook(id) {
+    books = books.filter(x => x.id !== id);
+    save(); render();
+  }
+
+  // ---- Modal ----
+  function openModal(id = null) {
+    editingId = id;
+    pickedRating = 0;
+    const modal = document.getElementById('modal-title');
+    modal.textContent = id ? 'Edit Book' : 'Add Book';
+
+    if (id) {
+      const b = books.find(x => x.id === id);
+      document.getElementById('f-title').value = b.title;
+      document.getElementById('f-author').value = b.author;
+      document.getElementById('f-genre').value = b.genre || '';
+      document.getElementById('f-status').value = b.status;
+      document.getElementById('f-notes').value = b.notes || '';
+      pickedRating = b.rating || 0;
+    } else {
+      document.getElementById('f-title').value = '';
+      document.getElementById('f-author').value = '';
+      document.getElementById('f-genre').value = '';
+      document.getElementById('f-status').value = 'to-read';
+      document.getElementById('f-notes').value = '';
+    }
+
+    updateStarPicker();
+    document.getElementById('overlay').classList.add('open');
+    document.getElementById('f-title').focus();
+  }
+
+  function editBook(id) { openModal(id); }
+
+  function closeModal() {
+    document.getElementById('overlay').classList.remove('open');
+    editingId = null;
+  }
+
+  function closeOnBackdrop(e) {
+    if (e.target === document.getElementById('overlay')) closeModal();
+  }
+
+  function saveBook() {
+    const title  = document.getElementById('f-title').value.trim();
+    const author = document.getElementById('f-author').value.trim();
+    if (!title || !author) {
+      alert('Title and Author are required.');
+      return;
+    }
+    const data = {
+      title,
+      author,
+      genre:  document.getElementById('f-genre').value.trim(),
+      status: document.getElementById('f-status').value,
+      notes:  document.getElementById('f-notes').value.trim(),
+      rating: pickedRating,
+    };
+
+    if (editingId) {
+      const b = books.find(x => x.id === editingId);
+      Object.assign(b, data);
+    } else {
+      books.push({ ...data, id: crypto.randomUUID(), added: Date.now() });
+    }
+
+    save(); render(); closeModal();
+  }
+
+  // ---- Star picker in modal ----
+  function updateStarPicker() {
+    document.querySelectorAll('#f-stars .star').forEach(s => {
+      s.classList.toggle('filled', parseInt(s.dataset.v) <= pickedRating);
+    });
+  }
+
+  document.getElementById('f-stars').addEventListener('click', e => {
+    const s = e.target.closest('.star');
+    if (!s) return;
+    const v = parseInt(s.dataset.v);
+    pickedRating = pickedRating === v ? 0 : v;
+    updateStarPicker();
+  });
+
+  // ---- Filters & search ----
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      render();
+    });
+  });
+
+  document.getElementById('search').addEventListener('input', render);
+  document.getElementById('sort-select').addEventListener('change', render);
+
+  // ---- Keyboard shortcut ----
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openModal(); }
+  });
+
+  // ---- Init ----
+  render();
+</script>
+</body>
+</html>
